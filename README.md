@@ -1,10 +1,10 @@
-#Codeigniter Api para ComeyCome
+# Codeigniter Api para ComeyCome
 
-##Configuraciones Necesarias
+## Configuraciones Necesarias
 * Cambiar archivo config.php con BASEURL de server de produccion
 * Verificar archivo database.php con datos para conexión a la DB de producción
 
-##ToDo's
+## ToDo's
 * Autorización de cambios de puesto
 * Autorización de vacantes
 * Mailing para cambios de puesto
