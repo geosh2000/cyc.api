@@ -174,6 +174,7 @@ class Cuartiles extends REST_Controller {
 
     $this->db->query("CREATE TEMPORARY TABLE cuartilOK SELECT
                           Nombre,
+                          Usuario as user,
                           NOMBREASESOR(GETIDASESOR(FINDSUPDAY(a.asesor, '$fin'), 2),
                                   2) AS Supervisor,
                           NewLocsPositive as LocsPeriodo,
@@ -226,7 +227,9 @@ class Cuartiles extends REST_Controller {
                               LEFT JOIN
                           querySesiones d ON a.asesor = d.asesor
                               LEFT JOIN
-                          queryPausas e ON a.asesor = e.asesor");
+                          queryPausas e ON a.asesor = e.asesor
+                              LEFT JOIN
+                          Asesores f ON a.asesor=f.id");
 
     if($query = $this->db->get('cuartilOK')){
       $result = array(
