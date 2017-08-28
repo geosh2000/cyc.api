@@ -99,7 +99,7 @@ class SolicitudBC extends REST_Controller {
       $data = $this->put();
 
       $vac_off = $this->getVacOff($data['id']);
-      
+
       if($data['approbe']){
         $result = $this->bajaSet( $data );
 
@@ -245,10 +245,19 @@ class SolicitudBC extends REST_Controller {
         return $result;
       }
     }else{
+
       $update = array(
-                      "fin" => $data['fechaBaja']
+                      'fin' => $data['fechaBaja'],
+                      'deactivation_comments' => "Desactivación automática por baja no reemplazable",
+                      'Activo' => 0,
+                      'Status' => 2,
                     );
-      $this->db->update('asesores_plazas', $update, "id = $vac_off");
+      $this->db->set('deactivated_by', "GETIDASESOR('".str_replace("."," ",$_GET['usn'])."',2)", FALSE)
+                ->set('date_deactivated', "NOW()", FALSE)
+                ->set($update)
+                ->where("id = ".$vac_off);
+
+      $query = $this->db->update('asesores_plazas');
     }
 
     if(date('Y-m-d', strtotime($last_fecha_in))>=date('Y-m-d', strtotime($data['fechaBaja']))){
