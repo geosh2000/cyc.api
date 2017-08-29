@@ -246,18 +246,7 @@ class SolicitudBC extends REST_Controller {
       }
     }else{
 
-      $update = array(
-                      'fin' => $data['fechaBaja'],
-                      'deactivation_comments' => "Desactivación automática por baja no reemplazable",
-                      'Activo' => 0,
-                      'Status' => 2,
-                    );
-      $this->db->set('deactivated_by', "GETIDASESOR('".str_replace("."," ",$_GET['usn'])."',2)", FALSE)
-                ->set('date_deactivated', "NOW()", FALSE)
-                ->set($update)
-                ->where("id = ".$vac_off);
-
-      $query = $this->db->update('asesores_plazas');
+      $this->notReplace($data, $usr, $vac_off);
     }
 
     if(date('Y-m-d', strtotime($last_fecha_in))>=date('Y-m-d', strtotime($data['fechaBaja']))){
@@ -297,6 +286,42 @@ class SolicitudBC extends REST_Controller {
 
     return $result;
 
+  }
+
+  public function setIn($data, $usr){
+
+    $update = array(
+                    'fecha_in'    => $data['fecha'],
+                    'asesor_in'   => $data['asesor']
+                  );
+    if($this->db->set('userupdate', "GETIDASESOR('".str_replace("."," ",$usr)."',2)", FALSE)
+        ->where("id=$movimiento")
+        ->update("asesores_movimiento_vacantes")){
+          $result = array(
+                          'status' => true,
+                          'msg'    => 'Asesor correctamente ingresado a la vacante');
+        }else{
+          $result = array(
+                          'status' => false,
+                          'msg'    => $this->db->error());
+        }
+
+    return $result;
+  }
+
+  public function notReplace($data, $usr, $vac_off){
+    $update = array(
+                    'fin' => $data['fechaBaja'],
+                    'deactivation_comments' => "Desactivación automática por baja no reemplazable",
+                    'Activo' => 0,
+                    'Status' => 2,
+                  );
+    $this->db->set('deactivated_by', "GETIDASESOR('".str_replace("."," ",$usr)."',2)", FALSE)
+              ->set('date_deactivated', "NOW()", FALSE)
+              ->set($update)
+              ->where("id = ".$vac_off);
+
+    $query = $this->db->update('asesores_plazas');
   }
 
   public function bajaSolicitud( $data, $usr  ){
@@ -765,7 +790,55 @@ class SolicitudBC extends REST_Controller {
 
   public function test_get(){
 
-    return array('status' => 'hola como estas');
+    echo "HOLA";
+
+    $result = array('status' => 'hola como estas');
+
+    echo "Adios";
+
+    return $result;
+
+    echo "Hola de nuevo";
+
+  }
+
+  public function approbeChange_put(){
+    $data = $this->put();
+
+    $q = $this->getVacOff($data['asesor']);
+    $vac_off = $q['vac_off'];
+
+    $out = $this->setOut($data, $_GET['usn']);
+
+      if($out['status']){
+
+        if((int)$data['reemplazable'] == 1){
+          $replace = $this->notReplace($data, $_GET['usn'], $vac_off);
+        }
+
+        $in = $this->setIn($data, $_GET['usn']);
+          if($in['status']){
+            $result = array (
+                              'status'  => true,
+                              'msg'     => "Cambio aplicado correctamente"
+                            );
+          }else{
+            $errors[] = $this->db->error();
+            $flag = false;
+          }
+
+
+      }else{
+        $errors[] = $out['msg'];
+        $flag = false;
+      }
+
+    if($flag){
+      return $result;
+    }else{
+      $result = array('status' => false, 'msg' => $errors);
+      return $result;
+    }
 
   }
 
