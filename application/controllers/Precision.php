@@ -288,10 +288,10 @@ class Precision extends REST_Controller {
         }else{
           $erlang = intval(agentno(	$info['forecast']/1800*$info['AHT'], 20,$info['AHT'],.8));
           $requeridos = intval($erlang/(1-$info['Reductores']));
-          if($info['Programados'] == 0){
+          if($requeridos == 0){
             $precision = 1;
           }else{
-            $precision = $requeridos/$info['Programados'];
+            $precision = $info['Programados']/$requeridos;
           }
 
         }
