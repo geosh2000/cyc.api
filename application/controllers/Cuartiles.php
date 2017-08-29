@@ -173,7 +173,7 @@ class Cuartiles extends REST_Controller {
     $this->db->query("ALTER TABLE querySesiones ADD PRIMARY KEY (asesor)");
 
     $this->db->query("CREATE TEMPORARY TABLE cuartilOK SELECT
-                          Nombre,
+                          a.Nombre,
                           Usuario as user,
                           NOMBREASESOR(GETIDASESOR(FINDSUPDAY(a.asesor, '$fin'), 2),
                                   2) AS Supervisor,
