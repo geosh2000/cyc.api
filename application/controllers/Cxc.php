@@ -276,7 +276,7 @@ class Cxc extends REST_Controller {
       $inicio = $this->uri->segment(3);
       $fin    = $this->uri->segment(4);
 
-      if($query = $this->db->select("a.*, NOMBREASESOR(asesor,2) as NombreAsesor, NOMBREASESOR(31,1) as NombreCreador, NOMBREASESOR(updated_by,1) as NombreAplicador")
+      if($query = $this->db->select("a.*, NOMBREASESOR(asesor,2) as NombreAsesor, NOMBREASESOR(created_by,1) as NombreCreador, NOMBREASESOR(updated_by,1) as NombreAplicador")
                         ->select("CASE WHEN status = 0 THEN 'Pendiente de Envío' WHEN status = 1 THEN 'Esperando RRHH' WHEN status = 2 THEN 'Aplicado' END as statusOK")
                         ->select("CASE WHEN tipo = 0 THEN 'Responsabilidad' WHEN tipo = 1 THEN 'Colaborador' END as tipoOK")
                         ->get_where('asesores_cxc a',"fecha_aplicacion BETWEEN '$inicio' AND '$fin'")){

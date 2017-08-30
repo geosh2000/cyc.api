@@ -208,4 +208,47 @@ class SolicitudesRH extends REST_Controller {
 
   }
 
+  public function approbeVacante_put(){
+
+    $result = validateToken( $_GET['token'], $_GET['usn'], $func = function(){
+
+      $data = $this->put();
+
+      if($data['accion']){
+        $status = 1;
+      }else{
+        $status = 3;
+      }
+
+      $update   =   array(
+                          'id'          => $data['solicitud'],
+                          'approbed_by' => $data['applier'],
+                          'status'      => $status
+                        );
+
+      $this->db->set($update)
+                ->set('date_approbed', 'NOW()', FALSE)
+                ->where("id = ".$data['solicitud']);
+
+      if($this->db->update('asesores_plazas')){
+        $result = array(
+                        'status'  => true,
+                        'msg'     => "Cambio de status completado"
+                      );
+      }else{
+        $result = array(
+                        'status'  => true,
+                        'msg'     => $this->db->error()
+                      );
+      }
+
+      return $result;
+
+
+    });
+
+    jsonPrint( $result );
+
+  }
+
 }
