@@ -16,6 +16,67 @@ class SolicitudesRH extends REST_Controller {
     $this->load->model('Cliente_model');
   }
 
+  public function getSolicitudesVacantes_get(){
+
+    $result = validateToken( $_GET['token'], $_GET['usn'], $func = function(){
+
+      $this->db->query("DROP TEMPORARY TABLE IF EXISTS relPuestos");
+      $this->db->query("CREATE TEMPORARY TABLE relPuestos SELECT
+                            a.id, b.*, c.PDV, d.Ciudad, NOMBREASESOR(created_by,1) as Creador, a.date_created as FechaSolicitud, a.comentarios
+                        FROM
+                            asesores_plazas a
+                                LEFT JOIN
+                            (SELECT
+                                a.id AS puestoID,
+                                    d.clave AS UDN,
+                                    c.clave AS Area,
+                                    b.clave AS Departamento,
+                                    a.clave AS Puesto,
+                                    CONCAT(d.clave, '-', c.clave, '-', b.clave, '-', a.clave) AS Codigo,
+                                    d.nombre AS UDN_nombre,
+                                    c.nombre AS Area_nombre,
+                                    b.nombre AS Departamento_nombre,
+                                    a.nombre AS Puesto_nombre
+                            FROM
+                                hc_codigos_Puesto a
+                            LEFT JOIN hc_codigos_Departamento b ON a.departamento = b.id
+                            LEFT JOIN hc_codigos_Areas c ON b.area = c.id
+                            LEFT JOIN hc_codigos_UnidadDeNegocio d ON c.unidadDeNegocio = d.id) b ON a.hc_puesto = b.puestoID
+                                LEFT JOIN
+                            PDVs c ON a.oficina = c.id
+                                LEFT JOIN
+                            db_municipios d ON a.ciudad = d.id
+                            WHERE
+                              a.status=0 AND a.Activo=1");
+      $query = "SELECT * FROM relPuestos";
+
+      if($q = $this->db->query($query)){
+
+        $solicitudes = $q->result_array();
+
+        $result       = array(
+                              'status'    => true,
+                              'rows'      => $q->num_rows(),
+                              'data'      => $solicitudes,
+                              'msg'       => "Solicitudes Cargadas"
+                            );
+      }else{
+        $result       = array(
+                              'status'    => false,
+                              'rows'      => 0,
+                              'data'      => null,
+                              'msg'       => $this->db->error()
+                            );
+      }
+
+      return $result;
+
+    });
+
+    jsonPrint( $result );
+
+  }
+
   public function getSolicitudes_get(){
 
     $result = validateToken( $_GET['token'], $_GET['usn'], $func = function(){

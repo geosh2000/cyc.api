@@ -81,7 +81,7 @@ class mailSolicitudPuesto{
     if($tipo == 'ask'){
       $mailList="cambio_puestoSOL";
     }else{
-      $mailList="cambio_puestoOKtest";
+      $mailList="cambio_puestoOK";
       mailSolicitudPuesto::sendMail(str_replace(" ",".",strtolower($mailInfo['sol'])),$mailInfo,$tipo);
     }
 
