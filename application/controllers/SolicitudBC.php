@@ -255,7 +255,7 @@ class SolicitudBC extends REST_Controller {
                       'msg'     => "No es posible asignar cambios con fechas anteriores al ultimo registrado"
                     );
 
-      return $data;
+      return $result;
     }
 
     if( (int)$data['reemplazable'] == 1 ){
@@ -295,8 +295,9 @@ class SolicitudBC extends REST_Controller {
                     'asesor_in'   => $data['asesor']
                   );
     if($this->db->set('userupdate', "GETIDASESOR('".str_replace("."," ",$usr)."',2)", FALSE)
-        ->where("id=$movimiento")
-        ->update("asesores_movimiento_vacantes")){
+                ->set($update)
+                ->where("id=".$data['movimientoID'])
+                ->update("asesores_movimiento_vacantes")){
           $result = array(
                           'status' => true,
                           'msg'    => 'Asesor correctamente ingresado a la vacante');
@@ -312,7 +313,7 @@ class SolicitudBC extends REST_Controller {
   public function notReplace($data, $usr, $vac_off){
     $update = array(
                     'fin' => $data['fechaBaja'],
-                    'deactivation_comments' => "Desactivación automática por baja no reemplazable",
+                    'deactivation_comments' => "Desactivación automática por baja o cambio no reemplazable",
                     'Activo' => 0,
                     'Status' => 2,
                   );
@@ -798,48 +799,95 @@ class SolicitudBC extends REST_Controller {
 
     return $result;
 
-    echo "Hola de nuevo";
+
 
   }
 
   public function approbeChange_put(){
-    $data = $this->put();
 
-    $q = $this->getVacOff($data['asesor']);
-    $vac_off = $q['vac_off'];
+    $result = validateToken( $_GET['token'], $_GET['usn'], $func = function(){
 
-    $out = $this->setOut($data, $_GET['usn']);
+      $data = $this->put();
+      $flag = true;
 
-      if($out['status']){
+      if($data['accion']){
+        $q = $this->db->get_where('rrhh_solicitudesCambioBaja', 'id = '.$data['solicitud']);
+        $solicitud = $q->row_array();
 
-        if((int)$data['reemplazable'] == 1){
-          $replace = $this->notReplace($data, $_GET['usn'], $vac_off);
-        }
+        $q = $this->getVacOff($solicitud['asesor']);
+        $vac_off = $q['vac_off'];
 
-        $in = $this->setIn($data, $_GET['usn']);
-          if($in['status']){
-            $result = array (
-                              'status'  => true,
-                              'msg'     => "Cambio aplicado correctamente"
-                            );
+        $dataOut = array(
+                          'id'                => $solicitud['asesor'],
+                          'reemplazable'      => $solicitud['reemplazable'],
+                          'fechaLiberacion'   => $solicitud['fecha_replace'],
+                          'fechaBaja'         => $solicitud['fecha'],
+                        );
+
+        $out = $this->setOut($dataOut, $_GET['usn']);
+
+          if($out['status']){
+
+            if((int)$solicitud['reemplazable'] == 1){
+              $replace = $this->notReplace($dataOut, $_GET['usn'], $vac_off);
+            }
+
+            $in = $this->setIn($solicitud, $_GET['usn']);
+              if($in['status']){
+                $result = array (
+                                  'status'  => true,
+                                  'msg'     => "Cambio aplicado correctamente"
+                                );
+              }else{
+                $errors[] = $this->db->error();
+                $flag = false;
+              }
+
+
           }else{
-            $errors[] = $this->db->error();
+            $errors[] = $out['msg'];
             $flag = false;
           }
 
+        if($flag){
 
+          // DepTable
+          $this->db->query("SELECT depAsesores(".$solicitud['asesor'].", ADDDATE(CURDATE(),365))");
+          //Update solicitud
+          $this->db->set(array('status' => 1))
+                    ->set('aprobado_por', "GETIDASESOR('".str_replace("."," ",$_GET['usn'])."',2)", FALSE)
+                    ->set('fecha_aprobacion', 'NOW()', FALSE)
+                    ->set('comentariosRRHH', $data['comentarios'])
+                    ->where('id='.$data['solicitud'])
+                    ->update('rrhh_solicitudesCambioBaja');
+          return $result;
+        }else{
+          $result = array('status' => false, 'msg' => $errors);
+          return $result;
+        }
+
+        return $result;
       }else{
-        $errors[] = $out['msg'];
-        $flag = false;
+
+        //Update solicitud
+        $this->db->set(array('status' => 3))
+                  ->set('aprobado_por', "GETIDASESOR('".str_replace("."," ",$_GET['usn'])."',2)", FALSE)
+                  ->set('fecha_aprobacion', 'NOW()', FALSE)
+                  ->where('id='.$data['solicitud'])
+                  ->update('rrhh_solicitudesCambioBaja');
+
+        return $result = array('status' => true, 'msg' => "Solicitud Declinada");
+
       }
 
-    if($flag){
-      return $result;
-    }else{
-      $result = array('status' => false, 'msg' => $errors);
-      return $result;
-    }
+
+
+    });
+
+    jsonPrint( $result );
 
   }
+
+
 
 }
