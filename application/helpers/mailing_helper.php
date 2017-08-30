@@ -5,7 +5,7 @@ class mailSolicitudPuesto{
   public $destinatario;
   public $mailInfo;
 
-  public static function mail( $class, $params, $vac_off ){
+  public static function mail( $class, $params, $vac_off, $tipo ){
 
     $mailInfo['asesor'] = $params['asesor'];
     $mailInfo['fechaCambio'] = $params['fechaCambio'];
@@ -14,6 +14,18 @@ class mailSolicitudPuesto{
     $mailInfo['applier'] = $params['applier'];
     $mailInfo['old']['vacante'] = $vac_off;
     $mailInfo['new']['vacante'] = $params['puesto']['vacante'];
+
+    if(isset($params['approber'])){
+      $mailInfo['approber'] = $params['approber'];
+    }else{
+      $mailInfo['approber'] = 0;
+    }
+
+    if(isset($params['action'])){
+      $mailInfo['action'] = $params['action'];
+    }else{
+      $mailInfo['action'] = false;
+    }
 
     $query="SELECT
                 a.id, f.Departamento, c.Puesto, PDV, f.UDN, f.Area, f.Puesto as PuestoRRHH, CodigoPuesto
@@ -58,29 +70,59 @@ class mailSolicitudPuesto{
       $mailInfo[$flag]['codigo']=$row->CodigoPuesto;
     }
 
-    $query="SELECT NombreAsesor(".$mailInfo['asesor'].",2) as nombreAsesor, NombreAsesor(".$mailInfo['applier'].",1) as nombreSol";
+    $query="SELECT NombreAsesor(".$mailInfo['asesor'].",2) as nombreAsesor, NombreAsesor(".$mailInfo['applier'].",1) as nombreSol, NombreAsesor(".$mailInfo['approber'].",1) as nombreAprobador";
     $q = $class->db->query($query);
     $result = $q->row();
     $mailInfo['nombreAsesor'] = $result->nombreAsesor;
+    $mailInfo['nombreAprobador'] = $result->nombreAprobador;
     $mailInfo['sol'] = $result->nombreSol;
 
-    $query="SELECT usuario FROM mail_lists WHERE notif='cambio_puestoSOL'";
+
+    if($tipo == 'ask'){
+      $mailList="cambio_puestoSOL";
+    }else{
+      $mailList="cambio_puestoOKtest";
+      mailSolicitudPuesto::sendMail(str_replace(" ",".",strtolower($mailInfo['sol'])),$mailInfo,$tipo);
+    }
+
+    $query="SELECT usuario FROM mail_lists WHERE notif='$mailList'";
     $q = $class->db->query($query);
     foreach ($q->result() as $row){
-      mailSolicitudPuesto::sendMail($row->usuario,$mailInfo);
+      mailSolicitudPuesto::sendMail($row->usuario,$mailInfo,$tipo);
     }
 
   }
 
-  public static function sendMail($user, $m_data){
+  public static function sendMail($user, $m_data, $tipo){
     $name=str_replace('.',' ',$user);
     $name=ucwords($name);
+
+    if($tipo == 'ask'){
+      $title="Solicitud de Camio de Puesto";
+      $descript=$m_data['sol']."</strong> ha registrado una <strong class=\"font-weight-bold\" style=\"-webkit-box-sizing: inherit;box-sizing: inherit;font-weight: 700;\">solicitud de cambio</strong> en el ComeyCome.";
+      $option="<a class=\"btn btn-primary btn-lg\" href=\"https://operaciones.pricetravel.com.mx/cycv2/#/aprobaciones_rrhh\" role=\"button\" style=\"-webkit-box-sizing: inherit;box-sizing: inherit;background-color: #0275d8;-webkit-text-decoration-skip: objects;color: #fff;text-decoration: underline;-ms-touch-action: manipulation;touch-action: manipulation;cursor: pointer;display: inline-block;font-weight: 400;line-height: 1.25;text-align: center;white-space: nowrap;vertical-align: middle;-webkit-user-select: none;-moz-user-select: none;-ms-user-select: none;user-select: none;border: 1px solid transparent;padding: .75rem 1.5rem;font-size: 1.25rem;border-radius: .3rem;-webkit-transition: all .2s ease-in-out;-o-transition: all .2s ease-in-out;transition: all .2s ease-in-out;border-color: #0275d8;\">Ver Solicitud</a>\n";
+      $mailTitle="Solicitud de Cambio de Puesto (".$m_data['nombreAsesor'].")";
+    }else{
+      if($m_data['action']){
+        $title="Camio de Puesto Aprobado";
+        $descript=$m_data['nombreAprobador']."</strong> ha <strong class=\"font-weight-bold\" style=\"-webkit-box-sizing: inherit;box-sizing: inherit;font-weight: 700;\">aprobado</strong> el cambio de puesto solicitado.";
+        $option="<span class=\"btn btn-success btn-lg\" style=\"-webkit-box-sizing: inherit;box-sizing: inherit;display: inline-block;font-weight: 400;line-height: 1.25;text-align: center;white-space: nowrap;vertical-align: middle;-webkit-user-select: none;-moz-user-select: none;-ms-user-select: none;user-select: none;border: 1px solid transparent;padding: .75rem 1.5rem;font-size: 1.25rem;border-radius: .3rem;-webkit-transition: all .2s ease-in-out;-o-transition: all .2s ease-in-out;transition: all .2s ease-in-out;color: #fff;background-color: #5cb85c;border-color: #5cb85c;\">Aprobada</span>\n";
+        $mailTitle="Cambio de Puesto Aprobado (".$m_data['nombreAsesor'].")";
+      }else{
+        $title="Cambio de Puesto Declinado";
+        $descript=$m_data['nombreAprobador']."</strong> ha <strong class=\"font-weight-bold\" style=\"-webkit-box-sizing: inherit;box-sizing: inherit;font-weight: 700;\">declinado</strong> el cambio de puesto solicitado.";
+        $option="<span class=\"btn btn-danger btn-lg\" style=\"-webkit-box-sizing: inherit;box-sizing: inherit;display: inline-block;font-weight: 400;line-height: 1.25;text-align: center;white-space: nowrap;vertical-align: middle;-webkit-user-select: none;-moz-user-select: none;-ms-user-select: none;user-select: none;border: 1px solid transparent;padding: .75rem 1.5rem;font-size: 1.25rem;border-radius: .3rem;-webkit-transition: all .2s ease-in-out;-o-transition: all .2s ease-in-out;transition: all .2s ease-in-out;color: #fff;background-color: #d9534f;border-color: #d9534f;\">Denegada</span>\n";
+        $mailTitle="Cambio de Puesto Declinado (".$m_data['nombreAsesor'].")";
+      }
+
+
+    }
 
     $msg= "<html xmlns=\"http://www.w3.org/1999/xhtml\" style=\"-webkit-box-sizing: border-box;box-sizing: border-box;font-family: sans-serif;line-height: 1.15;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;-ms-overflow-style: scrollbar;-webkit-tap-highlight-color: transparent;\">\n";
     $msg.= "  <head style=\"-webkit-box-sizing: inherit;box-sizing: inherit;\">\n";
     $msg.= "    <meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" style=\"-webkit-box-sizing: inherit;box-sizing: inherit;\">\n";
     $msg.= "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" style=\"-webkit-box-sizing: inherit;box-sizing: inherit;\">\n";
-    $msg.= "    <title style=\"-webkit-box-sizing: inherit;box-sizing: inherit;\">Solicitud de Cambio</title>\n";
+    $msg.= "    <title style=\"-webkit-box-sizing: inherit;box-sizing: inherit;\">$title</title>\n";
     $msg.= "  </head>\n";
     $msg.= "  <body style=\"-webkit-box-sizing: inherit;box-sizing: inherit;margin: 0;font-family: -apple-system,system-ui,BlinkMacSystemFont,&quot;Segoe UI&quot;,Roboto,&quot;Helvetica Neue&quot;,Arial,sans-serif;font-size: 1rem;font-weight: 400;line-height: 1.5;color: #292b2c;background-color: #fff;\">\n";
     $msg.= "    <div class=\"container\" style=\"-webkit-box-sizing: inherit;box-sizing: inherit;position: relative;margin-left: auto;margin-right: auto;padding-right: 15px;padding-left: 15px;  min-width: 900px; max-width:1200px\">\n";
@@ -89,8 +131,8 @@ class mailSolicitudPuesto{
     $msg.= "          ComeyCome\n";
     $msg.= "        </div>\n";
     $msg.= "        <div class=\"card-block\" style=\"-webkit-box-sizing: inherit;box-sizing: inherit;-webkit-box-flex: 1;-webkit-flex: 1 1 auto;-ms-flex: 1 1 auto;flex: 1 1 auto;padding: 1.25rem;\">\n";
-    $msg.= "          <h4 class=\"card-title\" style=\"-webkit-box-sizing: inherit;box-sizing: inherit;margin-top: 0;margin-bottom: .75rem;font-family: inherit;font-weight: 500;line-height: 1.1;color: inherit;font-size: 1.5rem;\">Cambio de Puesto</h4>\n";
-    $msg.= "          <p class=\"card-text\" style=\"-webkit-box-sizing: inherit;box-sizing: inherit;orphans: 3;widows: 3;margin-top: 0;margin-bottom: 1rem;\">Hola $name!, <strong class=\"font-weight-bold\" style=\"-webkit-box-sizing: inherit;box-sizing: inherit;font-weight: 700;\">".$m_data['sol']."</strong> ha registrado una <strong class=\"font-weight-bold\" style=\"-webkit-box-sizing: inherit;box-sizing: inherit;font-weight: 700;\">solicitud de cambio</strong> en el ComeyCome. A continuación los detalles</p>\n";
+    $msg.= "          <h4 class=\"card-title\" style=\"-webkit-box-sizing: inherit;box-sizing: inherit;margin-top: 0;margin-bottom: .75rem;font-family: inherit;font-weight: 500;line-height: 1.1;color: inherit;font-size: 1.5rem;\">$title</h4>\n";
+    $msg.= "          <p class=\"card-text\" style=\"-webkit-box-sizing: inherit;box-sizing: inherit;orphans: 3;widows: 3;margin-top: 0;margin-bottom: 1rem;\">Hola $name!, <strong class=\"font-weight-bold\" style=\"-webkit-box-sizing: inherit;box-sizing: inherit;font-weight: 700;\">".$descript." A continuación los detalles</p>\n";
     $msg.= "          <hr class=\"my-4\" style=\"-webkit-box-sizing: content-box;box-sizing: content-box;height: 0;overflow: visible;margin-top: 1.5rem!important;margin-bottom: 1.5rem!important;border: 0;border-top: 1px solid rgba(0,0,0,.1);\">\n";
     $msg.= "          <div class=\"d-flex justify-content-around align-items-center\" style=\"-webkit-box-sizing: inherit;box-sizing: inherit;display: flex!important;-webkit-justify-content: space-around!important;-ms-flex-pack: distribute!important;justify-content: space-around!important;-webkit-box-align: center!important;-webkit-align-items: center!important;-ms-flex-align: center!important;align-items: center!important;\">\n";
     $msg.= "\n";
@@ -146,7 +188,7 @@ class mailSolicitudPuesto{
     $msg.= "              </ul>\n";
     $msg.= "              <div class=\"card-block\" style=\"-webkit-box-sizing: inherit;box-sizing: inherit;-webkit-box-flex: 1;-webkit-flex: 1 1 auto;-ms-flex: 1 1 auto;flex: 1 1 auto;padding: 1.25rem;\">\n";
     $msg.= "                <p class=\"text-center\" style=\"-webkit-box-sizing: inherit;box-sizing: inherit;orphans: 3;widows: 3;margin-top: 0;margin-bottom: 1rem;text-align: center!important;\">\n";
-    $msg.= "                  <a class=\"btn btn-primary btn-lg\" href=\"#\" role=\"button\" style=\"-webkit-box-sizing: inherit;box-sizing: inherit;background-color: #0275d8;-webkit-text-decoration-skip: objects;color: #fff;text-decoration: underline;-ms-touch-action: manipulation;touch-action: manipulation;cursor: pointer;display: inline-block;font-weight: 400;line-height: 1.25;text-align: center;white-space: nowrap;vertical-align: middle;-webkit-user-select: none;-moz-user-select: none;-ms-user-select: none;user-select: none;border: 1px solid transparent;padding: .75rem 1.5rem;font-size: 1.25rem;border-radius: .3rem;-webkit-transition: all .2s ease-in-out;-o-transition: all .2s ease-in-out;transition: all .2s ease-in-out;border-color: #0275d8;\">Ver Solicitud</a>\n";
+    $msg.= "                  $option";
     $msg.= "                </p>\n";
     $msg.= "              </div>\n";
     $msg.= "            </div>\n";
@@ -167,7 +209,7 @@ class mailSolicitudPuesto{
     $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
     $headers .= "From: Notificaciones ComeyCome <operaciones@pricetravel.com>";
 
-    mail("$user@pricetravel.com","Solicitud de Cambio de Puesto (".$m_data['nombreAsesor'].")",$msg,$headers);
+    mail("$user@pricetravel.com",$mailTitle ,$msg,$headers);
 
     // echo $msg;
 

@@ -488,7 +488,7 @@ class SolicitudBC extends REST_Controller {
                         "folio"     => $this->db->insert_id()
                       );
 
-          mailSolicitudPuesto::mail( $this, $data, $vo['vac_off'] );
+          mailSolicitudPuesto::mail( $this, $data, $vo['vac_off'], 'ask' );
 
         }else{
           $result = array(
@@ -810,12 +810,25 @@ class SolicitudBC extends REST_Controller {
       $data = $this->put();
       $flag = true;
 
-      if($data['accion']){
-        $q = $this->db->get_where('rrhh_solicitudesCambioBaja', 'id = '.$data['solicitud']);
-        $solicitud = $q->row_array();
+      $q = $this->db->get_where('rrhh_solicitudesCambioBaja', 'id = '.$data['solicitud']);
+      $solicitud = $q->row_array();
 
-        $q = $this->getVacOff($solicitud['asesor']);
-        $vac_off = $q['vac_off'];
+      $q = $this->getVacOff($solicitud['asesor']);
+      $vac_off = $q['vac_off'];
+
+      $mailData   =   array(
+                            'asesor'          => $solicitud['asesor'],
+                            'fechaCambio'     => $solicitud['fecha'],
+                            'reemplazable'    => $solicitud['reemplazable'],
+                            'fechaLiberacion' => $solicitud['fecha_replace'],
+                            'applier'         => $solicitud['solicitado_por'],
+                            'approber'        => $data['applier'],
+                            'action'          => $data['accion'],
+                            'puesto'          => array('vacante' => $solicitud['vacante'])
+                          );
+
+      if($data['accion']){
+
 
         $dataOut = array(
                           'id'                => $solicitud['asesor'],
@@ -860,6 +873,10 @@ class SolicitudBC extends REST_Controller {
                     ->set('comentariosRRHH', $data['comentarios'])
                     ->where('id='.$data['solicitud'])
                     ->update('rrhh_solicitudesCambioBaja');
+
+          // Mail
+          mailSolicitudPuesto::mail( $this, $mailData, $vac_off, 'set' );
+          
           return $result;
         }else{
           $result = array('status' => false, 'msg' => $errors);
@@ -875,6 +892,8 @@ class SolicitudBC extends REST_Controller {
                   ->set('fecha_aprobacion', 'NOW()', FALSE)
                   ->where('id='.$data['solicitud'])
                   ->update('rrhh_solicitudesCambioBaja');
+
+        mailSolicitudPuesto::mail( $this, $mailData, $vac_off, 'set' );
 
         return $result = array('status' => true, 'msg' => "Solicitud Declinada");
 
