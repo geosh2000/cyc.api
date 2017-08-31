@@ -841,7 +841,7 @@ class SolicitudBC extends REST_Controller {
 
           if($out['status']){
 
-            if((int)$solicitud['reemplazable'] == 1){
+            if((int)$solicitud['reemplazable'] == 0){
               $replace = $this->notReplace($dataOut, $_GET['usn'], $vac_off);
             }
 
@@ -876,7 +876,7 @@ class SolicitudBC extends REST_Controller {
 
           // Mail
           mailSolicitudPuesto::mail( $this, $mailData, $vac_off, 'set' );
-          
+
           return $result;
         }else{
           $result = array('status' => false, 'msg' => $errors);
