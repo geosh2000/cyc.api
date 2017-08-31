@@ -41,7 +41,79 @@ class Cuartiles extends REST_Controller {
 
     });
 
-    jsonPrint( $result );
+    $result['data']=$this->quartilize($result['data'], array(
+                                                      'MontoTotal'  => 'Asc',
+                                                      'AHT'         => 'Desc',
+                                                      'FC'          => 'Asc'
+                                                    ));
+
+
+    $this->response($result);
+
+  }
+
+  public function quartilize($array, $fields){
+
+
+    $result = $array;
+
+    $avgSession = array_sum(array_column($result, 'TotalSesion'))/count($result)*0.7;
+
+    foreach($result as $index => $info){
+      foreach($fields as $key => $type){
+        if($result[$index]['TotalSesion'] >= $avgSession){
+          $data[$key][$index] = $info[$key];
+        }
+      }
+    }
+
+    foreach($data as $key => $info2){
+
+      if($fields[$key] == 'Desc'){
+        asort($info2);
+      }else{
+        arsort($info2);
+      }
+
+      $keys = array_keys($info2);
+
+      $length=count($info2);
+      $qs = intval($length/4);
+      $qsx = ($length % 4)*4;
+
+      $x=1;
+      for($i=1; $i<=4; $i++){
+
+        if($i <= $qsx){
+          $q[$i] = $qs+1;
+        }else{
+          $q[$i]=$qs;
+        }
+
+      }
+
+      $i=1;
+      $x=1;
+      foreach($info2 as $key2 => $info3){
+
+        if($x <= $qsx){
+          $max = $qs+1;
+        }else{
+          $max = $qs;
+        }
+
+        if($i > $max){
+          $x++;
+          $i=1;
+        }
+
+        $result[$key2][$key.'Q']=$x;
+
+        $i++;
+      }
+    }
+
+    return $result;
 
   }
 
