@@ -279,8 +279,8 @@ class Nomina extends REST_Controller {
       $this->db->query("DROP TEMPORARY TABLE IF EXISTS cxcNomina");
       $this->db->query("CREATE TEMPORARY TABLE cxcNomina SELECT
                             asesor,
-                            ROUND(SUM(IF(tipo = 1, a.monto, 0)),2) AS cxcResponsabilidad,
-                            ROUND(SUM(IF(tipo = 2, a.monto, 0)),2) AS cxcEmpleado
+                            ROUND(SUM(IF(tipo = 0, a.monto, 0)),2) AS cxcResponsabilidad,
+                            ROUND(SUM(IF(tipo = 1, a.monto, 0)),2) AS cxcEmpleado
                         FROM
                             rrhh_pagoCxC a
                                 LEFT JOIN

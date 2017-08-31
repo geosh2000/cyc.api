@@ -841,7 +841,7 @@ class SolicitudBC extends REST_Controller {
 
           if($out['status']){
 
-            if((int)$solicitud['reemplazable'] == 0){
+            if($solicitud['reemplazable'] == 0){
               $replace = $this->notReplace($dataOut, $_GET['usn'], $vac_off);
             }
 
