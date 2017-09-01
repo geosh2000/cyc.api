@@ -142,15 +142,27 @@ class Cxc extends REST_Controller {
     $result = validateToken( $_GET['token'], $_GET['usn'], $func = function(){
 
       $asesor = $this->uri->segment(3);
+      $filter = $this->uri->segment(4);
 
       if($asesor == 0){
-        $where = array('status' => 1 );
+        $where = array('a.status' => 1 );
+        switch ($filter) {
+          case 'pdv':
+            $where['dep'] = 29;
+            break;
+          case 'cc':
+            $where['dep !='] = 29;
+            break;
+        }
       }else{
-        $where = array('asesor' => $asesor, 'status !=' => 2);
+        $where = array('a.asesor' => $asesor, 'status !=' => 2);
       }
 
-      $this->db->select('*, nombreAsesor(created_by, 1) as creador, nombreAsesor(asesor, 2) as nombreAsesor');
-      if($query = $this->db->get_where('asesores_cxc', $where)){
+      $this->db->select('a.*, nombreAsesor(a.created_by, 1) as creador, nombreAsesor(a.asesor, 2) as nombreAsesor')
+                ->from('asesores_cxc a')
+                ->join('dep_asesores b', 'a.asesor=b.asesor AND CURDATE()=b.Fecha', 'LEFT')
+                ->where($where);
+      if($query = $this->db->get()){
 
         foreach($query->result() as $row){
           $data[] = $row;
@@ -179,7 +191,7 @@ class Cxc extends REST_Controller {
 
     });
 
-    jsonPrint( $result );
+    $this->response( $result );
 
   }
 
@@ -312,7 +324,7 @@ class Cxc extends REST_Controller {
                       'comments'    => $data['comments'],
                       'firmado'     => (int)$data['firmado'],
                       'monto'       => $data['monto'],
-                      'updated_by'  => $data['applier'] 
+                      'updated_by'  => $data['applier']
                     );
 
       if($this->db->set($update)->where(array('id' => $data['id'] ))->update('asesores_cxc')){
