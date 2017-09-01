@@ -308,7 +308,12 @@ class Cxc extends REST_Controller {
 
       $data = $this->put();
 
-      $update = array('comments' => $data['comments'], 'firmado' => (int)$data['firmado'], 'updated_by' => $data['applier'] );
+      $update = array(
+                      'comments'    => $data['comments'],
+                      'firmado'     => (int)$data['firmado'],
+                      'monto'       => $data['monto'],
+                      'updated_by'  => $data['applier'] 
+                    );
 
       if($this->db->set($update)->where(array('id' => $data['id'] ))->update('asesores_cxc')){
         $result = array(
