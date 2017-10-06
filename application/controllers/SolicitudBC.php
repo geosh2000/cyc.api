@@ -907,6 +907,101 @@ class SolicitudBC extends REST_Controller {
 
   }
 
+  public function alreadyOut( $asesor, $fecha ){
+
+    if($query = $this->db->query("SELECT vacante FROM asesores_movimiento_vacantes WHERE asesor_out=$asesor AND fecha_out='$fecha'")){
+      $regs = $query->row_array();
+
+      return $regs['vacante'];
+
+    }
+
+  }
+
+  public function pdvChangeOut($asesor, $fecha, $vacanteIn, $vacanteOut){
+    // Verifica si existe una salida en la misma fecha
+    $lastVacOff = $this->alreadyOut($asesor,$fecha);
+
+    if($lastVacOff != null){
+
+        // Elimina el ultimo registro in con la misma fecha de salida (SETEA A NULL)
+        $this->db->query("UPDATE asesores_movimiento_vacantes SET asesor_in = NULL, fecha_in = NULL WHERE asesor_in = $asesor AND fecha_in = '$fecha'");
+
+        // Verifica que la vacante in sea distinta a la que existe como out, si es la misma, borra el registro del out
+        if($lastVacOff == $vacanteIn){
+          $this->db->query("DELETE FROM asesores_movimiento_vacantes WHERE asesor_out=$asesor AND fecha_out='$fecha'");
+          return false;
+        }else{
+          return true;
+        }
+    }else{
+      $this->db->query("INSERT INTO asesores_movimiento_vacantes (vacante, fecha_out, asesor_out, userupdate) VALUES ($vacanteOut, '$fecha', $asesor, GETIDASESOR('".str_replace("."," ",$_GET['usn'])."',2))");
+      return true;
+    }
+  }
+
+  public function pdvChangeIn($asesor, $fecha, $vacante){
+    // Ingresa asesor a nueva plaza
+    $this->db->query("UPDATE asesores_movimiento_vacantes SET asesor_in = $asesor, fecha_in='$fecha', userupdate=GETIDASESOR('".str_replace("."," ",$_GET['usn'])."',2) WHERE vacante=$vacante AND asesor_in IS NULL");
+  }
+
+  public function chgPDV_put(){
+
+    $result = validateToken( $_GET['token'], $_GET['usn'], $func = function(){
+
+      $data = $this->put();
+
+      $f1 = $this->pdvChangeOut($data['asesor_in'], $data['fecha'], $data['vacante_in'], $data['vacante_out']);
+
+      if($data['replaced'] != null){
+          if($data['switch']){
+            $vOut = $data['vacante_out'];
+          }else{
+            $vOut = null;
+          }
+          $f2 = $this->pdvChangeOut($data['replaced'], $data['fecha'], $vOut, $data['vacante_in']);
+      }
+
+      if($f1){
+        $this->pdvChangeIn($data['asesor_in'], $data['fecha'], $data['vacante_in']);
+        $this->db->query("SELECT depAsesores(".$data['asesor_in'].",ADDDATE(CURDATE(),365))");
+      }
+
+      if($data['switch']){
+        if($f2){
+          $this->pdvChangeIn($data['replaced'], $data['fecha'], $data['vacante_out']);
+          $this->db->query("SELECT depAsesores(".$data['replaced'].",ADDDATE(CURDATE(),365))");
+        }
+      }else{
+        if($data['replaced'] != null){
+            $this->db->query("UPDATE dep_asesores SET vacante = null WHERE asesor=".$data['replaced']." AND Fecha>='".$data['fecha']."'");
+            $replaced=", ".$data['replaced'];
+        }else{
+          $replaced="";
+        }
+      }
+
+
+
+
+      $res = $this->db->query("SELECT asesor, Fecha, vacante FROM dep_asesores WHERE Fecha='".$data['fecha']."' AND asesor IN (".$data['asesor_in']."$replaced)");
+
+      $validate = $res->result_array();
+
+      $result = array(
+                      'data' => $validate
+                      );
+
+      return $result;
+
+
+    });
+
+    $this->response( $result );
+
+
+
+  }
 
 
 }

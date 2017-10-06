@@ -80,4 +80,121 @@ class Asesores extends REST_Controller {
 
   }
 
+  public function asesoresPDV_get(){
+    $result = validateToken( $_GET['token'], $_GET['usn'], $func = function(){
+
+      $search = $_GET['term'];
+      $date = $this->uri->segment(3);
+
+
+
+      if($list = $this->db->query("SELECT
+                            a.id, a.Nombre, `N Corto` as nCorto, Usuario, vacante, f.PDV, c.nombre as Puesto, e.Puesto as PuestoCOPC, g.Ciudad
+                        FROM
+                            Asesores a
+                                LEFT JOIN
+                            dep_asesores b ON a.id = b.asesor AND b.Fecha = '$date'
+                                LEFT JOIN
+                            hc_codigos_Puesto c ON b.hc_puesto = c.id
+                                LEFT JOIN
+                            PCRCs_puestos e ON b.puesto = e.id
+                                LEFT JOIN
+                            asesores_plazas h ON b.vacante = h.id
+                                LEFT JOIN
+                            PDVs f ON h.oficina = f.id
+                                LEFT JOIN
+                            db_municipios g ON f.ciudad = g.id
+                        WHERE
+                            (a.Nombre LIKE '%$search%' OR a.Usuario LIKE '%$search%' OR a.Usuario LIKE '%$search%') AND b.dep=29 AND Egreso>='$date'
+                        ORDER BY Nombre")){
+
+        $result = $list->result_array();
+      }else{
+        $result = array(
+                        'status'  => false,
+                        'msg'     => $this->db->error(),
+                        'wtf'     => "que?"
+                      );
+      }
+
+      return $result;
+
+    });
+
+    $this->response( $result );
+  }
+
+  public function PDVSelect_get(){
+    $result = validateToken( $_GET['token'], $_GET['usn'], $func = function(){
+
+      $search = $_GET['term'];
+
+      if($list = $this->db->query("SELECT
+                                      a.id, PDV, b.Ciudad
+                                  FROM
+                                      PDVs a
+                                          LEFT JOIN
+                                      db_municipios b ON a.ciudad = b.id
+                                  WHERE
+                                      (a.Activo=1 OR (a.Activo=0 AND a.PDV LIKE '%General%'))
+                                          AND (a.PDV LIKE 'MX%' OR a.PDV LIKE '%General%')
+                                          AND PDV NOT LIKE '%YYY%'
+                                          AND (PDV LIKE '%$search%' OR b.Ciudad LIKE '%$search%')
+                                  ORDER BY PDV")){
+
+        $result = $list->result_array();
+      }else{
+        $result = array(
+                        'status'  => false,
+                        'msg'     => $this->db->error(),
+                        'wtf'     => "que?"
+                      );
+      }
+
+      return $result;
+
+    });
+
+    $this->response( $result );
+  }
+
+  public function actualPlacesPDV_get(){
+    $result = validateToken( $_GET['token'], $_GET['usn'], $func = function(){
+
+      $search = $this->uri->segment(4);
+      $date = $this->uri->segment(3);
+
+      if($list = $this->db->query("SELECT
+                                      a.id AS Vacante,
+                                      GETVACANTE(a.id, '$date') AS asesor,
+                                      NOMBREASESOR(GETVACANTE(a.id, '$date'), 2) AS Nombre,
+                                      b.Puesto, PDV
+                                  FROM
+                                      asesores_plazas a
+                                          LEFT JOIN
+                                      PCRCs_puestos b ON a.puesto = b.id
+                                          LEFT JOIN
+                                      PDVs c ON a.oficina=c.id
+                                  WHERE
+                                      oficina = $search")){
+
+        $result = array(
+                        'status'  => true,
+                        'data'     => $list->result_array()
+                      );
+      }else{
+        $result = array(
+                        'status'  => false,
+                        'msg'     => $this->db->error(),
+                        'wtf'     => "que?"
+                      );
+      }
+
+      return $result;
+
+    });
+
+    $this->response( $result );
+  }
+
 }
