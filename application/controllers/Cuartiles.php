@@ -35,7 +35,14 @@ class Cuartiles extends REST_Controller {
 
       $hc_puesto = $puestos[$pcrc];
 
-      $result = $this->cuartilesIN( $inicio, $fin, $pcrc, $hc_puesto );
+      // Patch para llamadas de ventas MP para hibridos
+      if($pcrc == 5){
+        $skill = 35;
+      }else{
+        $skill = $pcrc;
+      }
+
+      $result = $this->cuartilesIN( $inicio, $fin, $skill, $hc_puesto );
 
       return $result;
 
@@ -128,6 +135,15 @@ class Cuartiles extends REST_Controller {
     $this->db->query("DROP TEMPORARY TABLE IF EXISTS querySesiones");
     $this->db->query("DROP TEMPORARY TABLE IF EXISTS cuartilOK");
 
+    // Patch para Híbridos MP
+    if($hc_puesto == 19){
+      $hibridos       = " AND puesto=44 ";
+      $hibridosLocs   = " AND tipo=2 ";
+    }else{
+      $hibridos       = "";
+      $hibridosLocs   = "";
+    }
+
     $this->db->query("CREATE TEMPORARY TABLE queryAsesores (SELECT
                           Fecha,
                           b.id as vacante, hc_dep, hc_puesto, departamento as dep, puesto,
@@ -137,7 +153,7 @@ class Cuartiles extends REST_Controller {
                               LEFT JOIN
                           asesores_plazas b ON a.Fecha BETWEEN inicio AND fin
                       WHERE
-                          hc_puesto = $hc_puesto
+                          hc_puesto = $hc_puesto $hibridos
                               AND Fecha BETWEEN '$inicio' AND '$fin'
                               HAVING asesor IS NOT NULL)");
 
@@ -156,7 +172,7 @@ class Cuartiles extends REST_Controller {
                           FROM
                               t_Locs
                           WHERE
-                              Fecha BETWEEN '$inicio' AND '$fin' AND asesor>0 AND asesor IS NOT NULL) b ON a.asesor = b.asesor");
+                              Fecha BETWEEN '$inicio' AND '$fin' AND asesor>0 AND asesor IS NOT NULL $hibridosLocs) b ON a.asesor = b.asesor");
 
     $this->db->query("ALTER TABLE queryLocs ADD PRIMARY KEY (Fecha, Hora, Localizador, VentaMXN)");
 
