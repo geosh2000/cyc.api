@@ -22,6 +22,7 @@ class Asesores extends REST_Controller {
 
       $this->db->select("e.id,
                           e.num_colaborador,
+                          e.num_colaborador as foto,
                           e.Nombre,
                           IF(a.dep = 29,
                               FINDSUPPDVDAY(b.oficina, CURDATE(), 2),

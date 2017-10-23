@@ -360,4 +360,17 @@ class Headcount extends REST_Controller {
 
   }
 
+  public function deps_get(){
+    $result = validateToken( $_GET['token'], $_GET['usn'], $func = function(){
+
+      $list = $this->db->query("SELECT id, Departamento FROM PCRCs WHERE parent_group=1 ORDER BY Departamento");
+      $result = $list->result_array();
+
+      return $result;
+
+      });
+
+      $this->response($result);
+  }
+
 }
