@@ -237,4 +237,86 @@ class Asistencia extends REST_Controller {
 
   }
 
+  public function ausPorAsesor_get(){
+
+    $result = validateToken( $_GET['token'], $_GET['usn'], $func = function(){
+
+      $asesor   = $this->uri->segment(3);
+      $fecha    = $this->uri->segment(4);
+
+      $ausentismo = $this->db->query("SELECT
+                            *, DATEDIFF(Fin, Inicio)+1 - Descansos - Beneficios as dias, motivo
+                        FROM
+                            Ausentismos a
+                              LEFT JOIN
+                            `Dias Pendientes Redimidos` b ON a.ausent_id = b.id_ausentismo
+                        WHERE
+                            asesor = $asesor
+                                AND '$fecha' BETWEEN Inicio AND Fin");
+
+      $result = $ausentismo->row();
+
+      if($result == NULL){
+        $result = 0;
+      }
+
+      return $result;
+
+    });
+
+    $this->response($result);
+
+
+  }
+
+  public function tipos_get(){
+
+    $result = validateToken( $_GET['token'], $_GET['usn'], $func = function(){
+
+      $asesor   = $this->uri->segment(3);
+
+      $ausentismos = $this->db->query("SELECT
+                            id, Ausentismo, max_days as dias
+                        FROM
+                            `Tipos Ausentismos`
+                        ORDER BY
+                            Ausentismo");
+
+      $result = $ausentismos->result_array();
+
+      $pendientes = $this->diasPendientes($asesor);
+
+      return array("tipos" => $result, "pending" => $pendientes);
+
+    });
+
+    $this->response($result);
+
+  }
+
+  public function diasPendientes( $asesor ){
+
+    $query = $this->db->query("SELECT
+                          a.id as asesor,
+                          a.motivo,
+                          assign,
+                          IF(redim IS NULL, 0, redim) as redim,
+                          assign - IF(redim IS NULL, 0, redim) as available
+                      FROM
+                          (SELECT
+                              id, sum(`dias asignados`) as assign, motivo
+                          FROM
+                              `Dias Pendientes`
+                          GROUP BY id , motivo) a
+                              LEFT JOIN
+                          (SELECT
+                              id, sum(dias) as redim, motivo
+                          FROM
+                              `Dias Pendientes Redimidos`
+                          GROUP BY id , motivo) b ON a.motivo = b.motivo AND a.id = b.id
+                      WHERE a.id=$asesor HAVING available>0 ORDER BY a.motivo");
+
+      return $query->result_array();
+
+  }
 }
