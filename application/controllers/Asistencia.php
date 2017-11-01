@@ -11,6 +11,7 @@ class Asistencia extends REST_Controller {
     parent::__construct();
     $this->load->helper('json_utilities');
     $this->load->helper('jwt');
+    $this->load->helper('validators');
     $this->load->database();
 
   }
@@ -317,6 +318,24 @@ class Asistencia extends REST_Controller {
                       WHERE a.id=$asesor HAVING available>0 ORDER BY a.motivo");
 
       return $query->result_array();
+
+  }
+
+  public function setAusentismo_put(){
+
+    $data = $this->put();
+    $this->load->library('form_validation');
+    $this->form_validation->set_data( $data );
+
+    if( $this->form_validation->run( 'ausentismo_put' ) ){
+      $this->response( $data );
+    }else{
+      errResponse( "Existen errores en el formulario", REST_Controller::HTTP_BAD_REQUEST, $this, 'errores', $this->form_validation->get_errores_arreglo() );
+    }
+
+
+
+    // $this->response( $data );
 
   }
 }

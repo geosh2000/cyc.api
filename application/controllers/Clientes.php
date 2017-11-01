@@ -11,24 +11,45 @@ class Clientes extends REST_Controller {
     parent::__construct();
     $this->load->helper('json_utilities');
     $this->load->database();
-    $this->load->model('Cliente_model');
+    $this->load->model('Asesores_model');
   }
 
-  public function index_get(){
+public function cliente_get(){
 
-    $clientes = array('hola','como','estas');
+    $asesor_id = $this->uri->segment(3);
 
-    jsonPrint( $clientes );
+    // Validacion
+    if( !isset($asesor_id) ){
 
-  }
+      $respuesta = array(
+                        'ERR' => true,
+                        'msg' => "Definir id del cliente" );
 
-  public function cliente_get(){
+      $this->response( $respuesta, REST_Controller::HTTP_BAD_REQUEST );
+      return;
+    }
 
-    $cliente_id = $this->uri->segment(3);
+    $cliente = $this->Asesores_model->get_asesor( $asesor_id );
 
-    $cliente = $this->Cliente_model->get_cliente( $cliente_id );
+    if( isset($cliente) ){
 
-    jsonPrint( $cliente );
+      $respuesta = array(
+                        'ERR'     => FALSE,
+                        'msg'     => "Registro cargado correctamente",
+                        'cliente' => $cliente );
+
+      $this->response( $respuesta );
+
+    }else{
+
+      $respuesta = array(
+                        'ERR'     => TRUE,
+                        'msg'     => "El cliente con el id $asesor_id no existe",
+                        'cliente' => null );
+
+      $this->response( $respuesta, REST_Controller::HTTP_NOT_FOUND );
+
+    }
 
   }
 

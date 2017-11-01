@@ -199,9 +199,15 @@ class Cxc extends REST_Controller {
 
     $result = validateToken( $_GET['token'], $_GET['usn'], $func = function(){
 
+      $limit = $this->uri->segment(3);
+
+      if( !isset($limit) ){
+        $limit = 5;
+      }
+
       $this->db->where('CURDATE() <', 'fin', FALSE)
                 ->order_by('inicio')
-                ->limit(5);
+                ->limit($limit);
       if($query = $this->db->get('rrhh_calendarioNomina')){
 
         foreach($query->result() as $row){
